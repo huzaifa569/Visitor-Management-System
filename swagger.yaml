@@ -1,0 +1,3168 @@
+openapi: 3.0.0
+info:
+  title: Visitor Management System API
+  description: API for managing visitors, training, access control, and analytics
+  version: 1.0.0
+  contact:
+    email: support@vms-example.com
+
+servers:
+  - url: https://vms-api-s6lc.onrender.com/api/v1
+    description: Production server
+  - url: https://vms-api-s6lc.onrender.com/api/v1
+    description: Staging server
+  - url: http://localhost:3000/api/v1
+    description: Local development server
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    User:
+      type: object
+      properties:
+        _id:
+          type: string
+          description: Unique identifier for the user
+        firstName:
+          type: string
+          description: User's first name
+        lastName:
+          type: string
+          description: User's last name
+        email:
+          type: string
+          format: email
+          description: User's email address
+        role:
+          type: string
+          enum: [admin, security, staff, manager, trainer, host]
+          description: User's role in the system
+        department:
+          type: string
+          description: User's department
+        phoneNumber:
+          type: string
+          description: User's phone number
+        isActive:
+          type: boolean
+          description: Whether the user account is active
+        createdAt:
+          type: string
+          format: date-time
+          description: When the user was created
+        updatedAt:
+          type: string
+          format: date-time
+          description: When the user was last updated
+      required:
+        - firstName
+        - lastName
+        - email
+        - role
+        - department
+        - phoneNumber
+
+    Visitor:
+      type: object
+      properties:
+        _id:
+          type: string
+          description: Unique identifier for the visitor
+        firstName:
+          type: string
+          description: Visitor's first name
+        lastName:
+          type: string
+          description: Visitor's last name
+        email:
+          type: string
+          format: email
+          description: Visitor's email address
+        phoneNumber:
+          type: string
+          description: Visitor's phone number
+        purpose:
+          type: string
+          description: Purpose of the visit
+        hostEmployee:
+          type: string
+          description: ID of the host employee
+        company:
+          type: string
+          description: Visitor's company (required for contractors)
+        siteLocation:
+          type: string
+          description: Site location (required for contractors)
+        department:
+          type: string
+          description: Department being visited
+        meetingLocation:
+          type: string
+          description: Location of the meeting
+        visitStartDate:
+          type: string
+          format: date-time
+          description: Scheduled start date and time of the visit
+        visitEndDate:
+          type: string
+          format: date-time
+          description: Scheduled end date and time of the visit
+        category:
+          type: string
+          enum: [VISITOR, CONTRACTOR]
+          description: Category of the visitor
+        checkInTime:
+          type: string
+          format: date-time
+          description: When the visitor checked in
+        checkOutTime:
+          type: string
+          format: date-time
+          description: When the visitor checked out
+        status:
+          type: string
+          enum: [pending, approved, checked-in, checked-out, cancelled]
+          description: Current status of the visit
+        qrCode:
+          type: string
+          description: Unique QR code for the visitor
+        trainingCompleted:
+          type: boolean
+          description: Whether the visitor has completed required training
+        approvedBy:
+          type: string
+          description: ID of the user who approved the visitor
+        approvedAt:
+          type: string
+          format: date-time
+          description: Time when visitor was approved
+        notificationSent:
+          type: boolean
+          description: Whether registration notification was sent
+        approvalNotificationSent:
+          type: boolean
+          description: Whether approval notification was sent
+      required:
+        - firstName
+        - lastName
+        - email
+        - phoneNumber
+        - purpose
+        - hostEmployee
+        - department
+        - meetingLocation
+        - visitStartDate
+        - visitEndDate
+        - category
+
+    Training:
+      type: object
+      properties:
+        _id:
+          type: string
+          description: Unique identifier for the training
+        title:
+          type: string
+          description: Title of the training
+        description:
+          type: string
+          description: Description of the training
+        type:
+          type: string
+          enum: [safety, security, procedure, other]
+          description: Type of training
+        content:
+          type: string
+          description: Training content
+        questions:
+          type: array
+          items:
+            type: object
+            properties:
+              question:
+                type: string
+              options:
+                type: array
+                items:
+                  type: string
+              correctAnswer:
+                type: integer
+        requiredScore:
+          type: number
+          description: Minimum score required to pass the training
+        isActive:
+          type: boolean
+          description: Whether the training is active
+      required:
+        - title
+        - description
+        - type
+        - content
+        - questions
+        - requiredScore
+
+    Error:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: false
+        message:
+          type: string
+          description: Error message
+        errors:
+          type: array
+          items:
+            type: object
+            properties:
+              param:
+                type: string
+              msg:
+                type: string
+              location:
+                type: string
+
+    Document:
+      type: object
+      properties:
+        _id:
+          type: string
+          description: Unique identifier for the document
+        fileName:
+          type: string
+          description: Name of the document file
+        fileType:
+          type: string
+          description: MIME type of the document
+        fileSize:
+          type: number
+          description: Size of the document in bytes
+        visitorId:
+          type: string
+          description: ID of the visitor associated with the document
+        uploadedBy:
+          type: string
+          description: ID of the user who uploaded the document
+        uploadedAt:
+          type: string
+          format: date-time
+          description: When the document was uploaded
+        documentType:
+          type: string
+          enum: [id, nda, training, other]
+          description: Type of document
+        description:
+          type: string
+          description: Description of the document
+      required:
+        - fileName
+        - fileType
+        - visitorId
+        - documentType
+
+    Notification:
+      type: object
+      properties:
+        _id:
+          type: string
+          description: Unique identifier for the notification
+        type:
+          type: string
+          enum: [visitor-arrival, visitor-departure, visitor-registration, visitor-cancelled, check-in, check-out, registration, cancelled, welcome, reset-password]
+          description: Type of notification
+        recipient:
+          type: string
+          description: Email of the recipient
+        status:
+          type: string
+          enum: [sent, failed, pending]
+          description: Status of the notification
+        timestamp:
+          type: string
+          format: date-time
+          description: When the notification was sent
+      required:
+        - type
+        - recipient
+        - status
+
+    SystemSettings:
+      type: object
+      properties:
+        emailNotificationsEnabled:
+          type: boolean
+          description: Whether email notifications are enabled
+        qrCodeExpiryHours:
+          type: number
+          description: Number of hours before QR codes expire
+        visitorPhotoRequired:
+          type: boolean
+          description: Whether visitor photos are required
+        trainingRequired:
+          type: boolean
+          description: Whether training is required for visitors
+        systemVersion:
+          type: string
+          description: Current version of the system
+      required:
+        - emailNotificationsEnabled
+        - qrCodeExpiryHours
+        - visitorPhotoRequired
+        - trainingRequired
+
+    License:
+      type: object
+      properties:
+        _id:
+          type: string
+          description: Unique identifier for the license
+        licenseKey:
+          type: string
+          description: License key (partially masked)
+        status:
+          type: string
+          enum: [Active, Expired, Revoked]
+          description: Status of the license
+        featuresEnabled:
+          type: array
+          items:
+            type: string
+          description: Features enabled by this license
+        expiryDate:
+          type: string
+          format: date-time
+          description: When the license expires
+        issuedTo:
+          type: string
+          description: Organization the license is issued to
+      required:
+        - licenseKey
+        - status
+        - expiryDate
+
+paths:
+  /auth/register:
+    post:
+      summary: Register a new user
+      description: Create a new user account in the system
+      tags:
+        - Authentication
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                firstName:
+                  type: string
+                lastName:
+                  type: string
+                email:
+                  type: string
+                  format: email
+                password:
+                  type: string
+                  format: password
+                department:
+                  type: string
+                phoneNumber:
+                  type: string
+                role:
+                  type: string
+                  enum: [admin, security, staff, manager, trainer, host]
+              required:
+                - firstName
+                - lastName
+                - email
+                - password
+                - department
+                - phoneNumber
+      responses:
+        '201':
+          description: User registered successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: object
+                    properties:
+                      userId:
+                        type: string
+                      email:
+                        type: string
+                        format: email
+                      firstName:
+                        type: string
+                      lastName:
+                        type: string
+                      role:
+                        type: string
+                      accessToken:
+                        type: string
+                      refreshToken:
+                        type: string
+        '400':
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: Email already registered
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /auth/login:
+    post:
+      summary: Log in to the system
+      description: Authenticate a user and get access tokens
+      tags:
+        - Authentication
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                email:
+                  type: string
+                  format: email
+                password:
+                  type: string
+                  format: password
+              required:
+                - email
+                - password
+      responses:
+        '200':
+          description: Login successful
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: object
+                    properties:
+                      userId:
+                        type: string
+                      email:
+                        type: string
+                        format: email
+                      firstName:
+                        type: string
+                      lastName:
+                        type: string
+                      role:
+                        type: string
+                      accessToken:
+                        type: string
+                      refreshToken:
+                        type: string
+        '401':
+          description: Invalid credentials
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /auth/refresh-token:
+    post:
+      summary: Refresh access token
+      description: Get a new access token using a refresh token
+      tags:
+        - Authentication
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                refreshToken:
+                  type: string
+              required:
+                - refreshToken
+      responses:
+        '200':
+          description: Token refreshed successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  accessToken:
+                    type: string
+        '401':
+          description: Invalid or expired refresh token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /auth/profile:
+    get:
+      summary: Get user profile
+      description: Get the profile of the currently authenticated user
+      tags:
+        - Authentication
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Profile retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    $ref: '#/components/schemas/User'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /auth/forgot-password:
+    post:
+      summary: Request password reset
+      description: Send a password reset email to the user
+      tags:
+        - Authentication
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                email:
+                  type: string
+                  format: email
+              required:
+                - email
+      responses:
+        '200':
+          description: Password reset email sent
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: Password reset instructions sent to email
+        '404':
+          description: User not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /auth/reset-password:
+    post:
+      summary: Reset password
+      description: Reset a user's password using a reset token
+      tags:
+        - Authentication
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                resetToken:
+                  type: string
+                newPassword:
+                  type: string
+                  format: password
+              required:
+                - resetToken
+                - newPassword
+      responses:
+        '200':
+          description: Password reset successful
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: Password reset successful
+        '400':
+          description: Invalid or expired reset token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /auth/change-password:
+    post:
+      summary: Change password
+      description: Change the password for the authenticated user
+      tags:
+        - Authentication
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                currentPassword:
+                  type: string
+                  format: password
+                newPassword:
+                  type: string
+                  format: password
+              required:
+                - currentPassword
+                - newPassword
+      responses:
+        '200':
+          description: Password changed successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: Password changed successfully
+        '401':
+          description: Current password is incorrect
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+
+  # New paths for Visit History
+  # Visitor Endpoints
+  /visitors/schedule:
+    post:
+      summary: Schedule a visit
+      description: Create a new visitor record and schedule a visit
+      tags:
+        - Visitors
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                firstName:
+                  type: string
+                lastName:
+                  type: string
+                email:
+                  type: string
+                  format: email
+                phoneNumber:
+                  type: string
+                purpose:
+                  type: string
+                company:
+                  type: string
+                visitDate:
+                  type: string
+                  format: date-time
+                hostEmployeeId:
+                  type: string
+              required:
+                - firstName
+                - lastName
+                - email
+                - phoneNumber
+                - purpose
+                - visitDate
+                - hostEmployeeId
+      responses:
+        '201':
+          description: Visit scheduled successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    $ref: '#/components/schemas/Visitor'
+        '400':
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /visitors:
+    get:
+      summary: Get all visitors
+      description: Get all visitors in the system (admin/manager/security only)
+      tags:
+        - Visitors
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: status
+          in: query
+          description: Filter by visitor status
+          schema:
+            type: string
+            enum: [pending, approved, checked-in, checked-out, cancelled]
+        - name: startDate
+          in: query
+          description: Filter by visit start date (start)
+          schema:
+            type: string
+            format: date
+        - name: endDate
+          in: query
+          description: Filter by visit start date (end)
+          schema:
+            type: string
+            format: date
+        - name: category
+          in: query
+          description: Filter by visitor category
+          schema:
+            type: string
+            enum: [VISITOR, CONTRACTOR]
+        - name: department
+          in: query
+          description: Filter by department
+          schema:
+            type: string
+        - name: search
+          in: query
+          description: Search by name, email, company, or purpose
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Visitors retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  count:
+                    type: integer
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Visitor'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Forbidden - requires admin, manager, or security role
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /visitors/host:
+    get:
+      summary: Get visitors by host
+      description: Get all visitors for the authenticated host user
+      tags:
+        - Visitors
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: status
+          in: query
+          description: Filter by visitor status
+          schema:
+            type: string
+            enum: [scheduled, checked-in, checked-out, cancelled]
+        - name: startDate
+          in: query
+          description: Filter by visit date (start)
+          schema:
+            type: string
+            format: date
+        - name: endDate
+          in: query
+          description: Filter by visit date (end)
+          schema:
+            type: string
+            format: date
+      responses:
+        '200':
+          description: Visitors retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Visitor'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /visitors/{visitorId}:
+    get:
+      summary: Get visitor details
+      description: Get details of a specific visitor
+      tags:
+        - Visitors
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: visitorId
+          in: path
+          required: true
+          description: ID of the visitor
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Visitor details retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    $ref: '#/components/schemas/Visitor'
+        '404':
+          description: Visitor not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    put:
+      summary: Update visitor
+      description: Update details of a specific visitor
+      tags:
+        - Visitors
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: visitorId
+          in: path
+          required: true
+          description: ID of the visitor
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                firstName:
+                  type: string
+                lastName:
+                  type: string
+                email:
+                  type: string
+                  format: email
+                phoneNumber:
+                  type: string
+                purpose:
+                  type: string
+                company:
+                  type: string
+                visitDate:
+                  type: string
+                  format: date-time
+                hostEmployeeId:
+                  type: string
+      responses:
+        '200':
+          description: Visitor updated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    $ref: '#/components/schemas/Visitor'
+        '404':
+          description: Visitor not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '400':
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /visitors/{visitorId}/check-in:
+    post:
+      summary: Check in visitor
+      description: Check in a visitor
+      tags:
+        - Visitors
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: visitorId
+          in: path
+          required: true
+          description: ID of the visitor
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Visitor checked in successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    $ref: '#/components/schemas/Visitor'
+        '404':
+          description: Visitor not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '400':
+          description: Invalid visitor status for check-in
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Forbidden - requires security or admin role
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /visitors/{visitorId}/check-out:
+    post:
+      summary: Check out visitor
+      description: Check out a visitor
+      tags:
+        - Visitors
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: visitorId
+          in: path
+          required: true
+          description: ID of the visitor
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Visitor checked out successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    $ref: '#/components/schemas/Visitor'
+        '404':
+          description: Visitor not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '400':
+          description: Visitor must be checked-in first
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Forbidden - requires security or admin role
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /visitors/visits:
+    get:
+      summary: Get visit history
+      description: Get history of all visits
+      tags:
+        - Visitors
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: startDate
+          in: query
+          description: Filter by visit date (start)
+          schema:
+            type: string
+            format: date
+        - name: endDate
+          in: query
+          description: Filter by visit date (end)
+          schema:
+            type: string
+            format: date
+        - name: status
+          in: query
+          description: Filter by visit status
+          schema:
+            type: string
+            enum: [scheduled, checked-in, checked-out, cancelled]
+        - name: location
+          in: query
+          description: Filter by location
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Visit history retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  count:
+                    type: integer
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Visitor'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /visitors/visits/{visitorId}:
+    get:
+      summary: Get visit history for a visitor
+      description: Get history of visits for a specific visitor
+      tags:
+        - Visitors
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: visitorId
+          in: path
+          required: true
+          description: ID of the visitor
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Visit history retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  count:
+                    type: integer
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Visitor'
+        '404':
+          description: Visitor not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  # Training Endpoints
+  /training:
+    get:
+      summary: Get all trainings
+      description: Get a list of all available trainings
+      tags:
+        - Training
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Trainings retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Training'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    post:
+      summary: Create training
+      description: Create a new training course
+      tags:
+        - Training
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                title:
+                  type: string
+                description:
+                  type: string
+                type:
+                  type: string
+                  enum: [safety, security, procedure, other]
+                content:
+                  type: string
+                questions:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      question:
+                        type: string
+                      options:
+                        type: array
+                        items:
+                          type: string
+                      correctAnswer:
+                        type: integer
+                requiredScore:
+                  type: number
+                  minimum: 0
+                  maximum: 100
+              required:
+                - title
+                - description
+                - type
+                - content
+                - questions
+                - requiredScore
+      responses:
+        '201':
+          description: Training created successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    $ref: '#/components/schemas/Training'
+        '400':
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Forbidden - requires admin role
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /training/submit:
+    post:
+      summary: Submit training
+      description: Submit answers for a training course
+      tags:
+        - Training
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                visitorId:
+                  type: string
+                trainingId:
+                  type: string
+                answers:
+                  type: array
+                  items:
+                    type: integer
+              required:
+                - visitorId
+                - trainingId
+                - answers
+      responses:
+        '200':
+          description: Training submitted successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: object
+                    properties:
+                      score:
+                        type: number
+                      passed:
+                        type: boolean
+                      completion:
+                        type: object
+                        properties:
+                          visitorId:
+                            type: string
+                          trainingId:
+                            type: string
+                          score:
+                            type: number
+                          passed:
+                            type: boolean
+                          completedAt:
+                            type: string
+                            format: date-time
+        '400':
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Training not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /training/status/{visitorId}:
+    get:
+      summary: Get training status
+      description: Get the training status for a specific visitor
+      tags:
+        - Training
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: visitorId
+          in: path
+          required: true
+          description: ID of the visitor
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Training status retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        trainingId:
+                          type: string
+                        title:
+                          type: string
+                        score:
+                          type: number
+                        passed:
+                          type: boolean
+                        completedAt:
+                          type: string
+                          format: date-time
+        '404':
+          description: Visitor not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /training/{trainingId}:
+    get:
+      summary: Get training by ID
+      description: Get details of a specific training
+      tags:
+        - Training
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: trainingId
+          in: path
+          required: true
+          description: ID of the training
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Training retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    $ref: '#/components/schemas/Training'
+        '404':
+          description: Training not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    put:
+      summary: Update training
+      description: Update a specific training
+      tags:
+        - Training
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: trainingId
+          in: path
+          required: true
+          description: ID of the training
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                title:
+                  type: string
+                description:
+                  type: string
+                type:
+                  type: string
+                  enum: [safety, security, procedure, other]
+                content:
+                  type: string
+                questions:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      question:
+                        type: string
+                      options:
+                        type: array
+                        items:
+                          type: string
+                      correctAnswer:
+                        type: integer
+                requiredScore:
+                  type: number
+                  minimum: 0
+                  maximum: 100
+                isActive:
+                  type: boolean
+      responses:
+        '200':
+          description: Training updated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    $ref: '#/components/schemas/Training'
+        '404':
+          description: Training not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '400':
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Forbidden - requires admin role
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    delete:
+      summary: Delete training
+      description: Delete a specific training
+      tags:
+        - Training
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: trainingId
+          in: path
+          required: true
+          description: ID of the training
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Training deleted successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: Training deleted successfully
+        '404':
+          description: Training not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Forbidden - requires admin role
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /training/enrollments:
+    post:
+      summary: Enroll visitor in training
+      description: Enroll a visitor in a training course
+      tags:
+        - Training
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                visitorId:
+                  type: string
+                trainingId:
+                  type: string
+              required:
+                - visitorId
+                - trainingId
+      responses:
+        '201':
+          description: Visitor enrolled successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: object
+                    properties:
+                      _id:
+                        type: string
+                      visitorId:
+                        type: string
+                      trainingId:
+                        type: string
+                      status:
+                        type: string
+                        enum: [NotStarted, InProgress, Completed]
+                      score:
+                        type: number
+                      passed:
+                        type: boolean
+        '400':
+          description: Invalid input or visitor already enrolled
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Visitor or training not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Forbidden - requires admin or trainer role
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /training/certificates/{enrollmentId}:
+    get:
+      summary: Generate certificate
+      description: Generate a certificate for a completed training
+      tags:
+        - Training
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: enrollmentId
+          in: path
+          required: true
+          description: ID of the training enrollment
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Certificate generated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: object
+                    properties:
+                      certificateId:
+                        type: string
+                      visitorName:
+                        type: string
+                      trainingTitle:
+                        type: string
+                      trainingType:
+                        type: string
+                      score:
+                        type: number
+                      completionDate:
+                        type: string
+                        format: date-time
+                      issueDate:
+                        type: string
+                        format: date-time
+        '404':
+          description: Enrollment not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '400':
+          description: Training not passed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  # Access Control Endpoints
+  /access-control/validate-qr:
+    post:
+      summary: Validate QR code
+      description: Validate a visitor's QR code for access
+      tags:
+        - Access Control
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                qrData:
+                  type: string
+              required:
+                - qrData
+      responses:
+        '200':
+          description: QR code validated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: object
+                    properties:
+                      visitorId:
+                        type: string
+                      name:
+                        type: string
+                      hostName:
+                        type: string
+                      accessGranted:
+                        type: boolean
+        '400':
+          description: Invalid QR code data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Access denied
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /access-control/qr/{visitorId}:
+    get:
+      summary: Generate QR code
+      description: Generate a QR code for a visitor
+      tags:
+        - Access Control
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: visitorId
+          in: path
+          required: true
+          description: ID of the visitor
+          schema:
+            type: string
+      responses:
+        '200':
+          description: QR code generated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: object
+                    properties:
+                      qrCode:
+                        type: string
+                        description: Base64 encoded QR code image
+                      payload:
+                        type: object
+                        properties:
+                          visitorId:
+                            type: string
+                          validUntil:
+                            type: string
+                            format: date-time
+                          type:
+                            type: string
+        '404':
+          description: Visitor not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  # Analytics Endpoints
+  /analytics/visitors:
+    get:
+      summary: Get visitor metrics
+      description: Get metrics and statistics about visitors
+      tags:
+        - Analytics
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: startDate
+          in: query
+          description: Start date for the analytics period
+          schema:
+            type: string
+            format: date
+        - name: endDate
+          in: query
+          description: End date for the analytics period
+          schema:
+            type: string
+            format: date
+      responses:
+        '200':
+          description: Visitor metrics retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: object
+                    properties:
+                      totalVisitors:
+                        type: integer
+                      checkedIn:
+                        type: integer
+                      checkedOut:
+                        type: integer
+                      scheduled:
+                        type: integer
+                      cancelled:
+                        type: integer
+                      byDepartment:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            department:
+                              type: string
+                            count:
+                              type: integer
+                      byDate:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            date:
+                              type: string
+                              format: date
+                            count:
+                              type: integer
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Forbidden - requires manager or admin role
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /analytics/access:
+    get:
+      summary: Get access metrics
+      description: Get metrics and statistics about access control
+      tags:
+        - Analytics
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: startDate
+          in: query
+          description: Start date for the analytics period
+          schema:
+            type: string
+            format: date
+        - name: endDate
+          in: query
+          description: End date for the analytics period
+          schema:
+            type: string
+            format: date
+      responses:
+        '200':
+          description: Access metrics retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: object
+                    properties:
+                      totalAccesses:
+                        type: integer
+                      successfulAccesses:
+                        type: integer
+                      deniedAccesses:
+                        type: integer
+                      byReason:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            reason:
+                              type: string
+                            count:
+                              type: integer
+                      byLocation:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            location:
+                              type: string
+                            count:
+                              type: integer
+                      byTime:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            hour:
+                              type: integer
+                            count:
+                              type: integer
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Forbidden - requires security or admin role
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /analytics/training:
+    get:
+      summary: Get training metrics
+      description: Get metrics and statistics about training completion
+      tags:
+        - Analytics
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: startDate
+          in: query
+          description: Start date for the analytics period
+          schema:
+            type: string
+            format: date
+        - name: endDate
+          in: query
+          description: End date for the analytics period
+          schema:
+            type: string
+            format: date
+      responses:
+        '200':
+          description: Training metrics retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: object
+                    properties:
+                      totalCompletions:
+                        type: integer
+                      passRate:
+                        type: number
+                        format: float
+                      averageScore:
+                        type: number
+                        format: float
+                      byTraining:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            trainingId:
+                              type: string
+                            title:
+                              type: string
+                            completions:
+                              type: integer
+                            passRate:
+                              type: number
+                              format: float
+                            averageScore:
+                              type: number
+                              format: float
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Forbidden - requires trainer or admin role
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /analytics/system:
+    get:
+      summary: Get system metrics
+      description: Get metrics and statistics about system usage
+      tags:
+        - Analytics
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: System metrics retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: object
+                    properties:
+                      activeUsers:
+                        type: integer
+                      apiRequests:
+                        type: object
+                        properties:
+                          total:
+                            type: integer
+                          byEndpoint:
+                            type: array
+                            items:
+                              type: object
+                              properties:
+                                endpoint:
+                                  type: string
+                                count:
+                                  type: integer
+                      errorRate:
+                        type: number
+                        format: float
+                      averageResponseTime:
+                        type: number
+                        format: float
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Forbidden - requires admin role
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  # Notification Endpoints
+  /notifications/visitor:
+    post:
+      summary: Send notification to visitor
+      description: Send a notification to a visitor
+      tags:
+        - Notifications
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                visitorId:
+                  type: string
+                type:
+                  type: string
+                  enum: [check-in, check-out, registration, cancelled, welcome, reset-password]
+                message:
+                  type: string
+              required:
+                - visitorId
+                - type
+      responses:
+        '200':
+          description: Notification sent successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: Notification sent successfully
+        '404':
+          description: Visitor not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Failed to send notification
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /notifications/host:
+    post:
+      summary: Send notification to host
+      description: Send a notification to a host
+      tags:
+        - Notifications
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                hostId:
+                  type: string
+                type:
+                  type: string
+                  enum: [visitor-arrival, visitor-departure, visitor-registration, visitor-cancelled]
+                visitorId:
+                  type: string
+                message:
+                  type: string
+              required:
+                - hostId
+                - type
+                - visitorId
+      responses:
+        '200':
+          description: Notification sent successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: Notification sent successfully
+        '404':
+          description: Host or visitor not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Failed to send notification
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /notifications/history:
+    get:
+      summary: Get notification history
+      description: Get history of sent notifications
+      tags:
+        - Notifications
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Notification history retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Notification'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Forbidden - requires admin role
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /notifications/settings:
+    get:
+      summary: Get notification settings
+      description: Get notification settings
+      tags:
+        - Notifications
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Notification settings retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: object
+                    properties:
+                      emailNotificationsEnabled:
+                        type: boolean
+                      hostNotificationsEnabled:
+                        type: boolean
+                      visitorNotificationsEnabled:
+                        type: boolean
+                      notificationTypes:
+                        type: object
+                        additionalProperties:
+                          type: boolean
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    put:
+      summary: Update notification settings
+      description: Update notification settings
+      tags:
+        - Notifications
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                settings:
+                  type: object
+                  properties:
+                    emailNotificationsEnabled:
+                      type: boolean
+                    hostNotificationsEnabled:
+                      type: boolean
+                    visitorNotificationsEnabled:
+                      type: boolean
+                    notificationTypes:
+                      type: object
+                      additionalProperties:
+                        type: boolean
+              required:
+                - settings
+      responses:
+        '200':
+          description: Notification settings updated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: Notification settings updated successfully
+                  data:
+                    type: object
+        '400':
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Forbidden - requires admin role
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  # Document Management Endpoints
+  /documents/upload:
+    post:
+      summary: Upload document
+      description: Upload a document for a visitor
+      tags:
+        - Documents
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                file:
+                  type: string
+                  format: binary
+                visitorId:
+                  type: string
+                documentType:
+                  type: string
+                  enum: [id, nda, training, other]
+                description:
+                  type: string
+              required:
+                - file
+                - visitorId
+                - documentType
+      responses:
+        '201':
+          description: Document uploaded successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: Document uploaded successfully
+                  data:
+                    $ref: '#/components/schemas/Document'
+        '400':
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /documents/visitor/{visitorId}:
+    get:
+      summary: Get visitor documents
+      description: Get documents for a specific visitor
+      tags:
+        - Documents
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: visitorId
+          in: path
+          required: true
+          description: ID of the visitor
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Documents retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  count:
+                    type: integer
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Document'
+        '404':
+          description: Visitor not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /documents/{documentId}:
+    get:
+      summary: Get document
+      description: Get a specific document
+      tags:
+        - Documents
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: documentId
+          in: path
+          required: true
+          description: ID of the document
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Document retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    $ref: '#/components/schemas/Document'
+        '404':
+          description: Document not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    delete:
+      summary: Delete document
+      description: Delete a specific document
+      tags:
+        - Documents
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: documentId
+          in: path
+          required: true
+          description: ID of the document
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Document deleted successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: Document deleted successfully
+        '404':
+          description: Document not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Forbidden - requires admin role
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  # Admin Endpoints
+  /admin/users:
+    get:
+      summary: Get all users
+      description: Get a list of all users
+      tags:
+        - Admin
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: role
+          in: query
+          description: Filter by user role
+          schema:
+            type: string
+            enum: [admin, security, staff, manager, trainer, host]
+        - name: department
+          in: query
+          description: Filter by department
+          schema:
+            type: string
+        - name: isActive
+          in: query
+          description: Filter by active status
+          schema:
+            type: boolean
+        - name: search
+          in: query
+          description: Search by name or email
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Users retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  count:
+                    type: integer
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/User'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Forbidden - requires admin role
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    post:
+      summary: Create user
+      description: Create a new user
+      tags:
+        - Admin
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                email:
+                  type: string
+                  format: email
+                password:
+                  type: string
+                  format: password
+                firstName:
+                  type: string
+                lastName:
+                  type: string
+                role:
+                  type: string
+                  enum: [admin, security, staff, manager, trainer, host]
+                department:
+                  type: string
+                phoneNumber:
+                  type: string
+              required:
+                - email
+                - password
+                - firstName
+                - lastName
+                - role
+                - department
+                - phoneNumber
+      responses:
+        '201':
+          description: User created successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    $ref: '#/components/schemas/User'
+        '400':
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: Email already registered
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Forbidden - requires admin role
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /admin/users/{userId}:
+    get:
+      summary: Get user by ID
+      description: Get details of a specific user
+      tags:
+        - Admin
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          description: ID of the user
+          schema:
+            type: string
+      responses:
+        '200':
+          description: User retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    $ref: '#/components/schemas/User'
+        '404':
+          description: User not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Forbidden - requires admin role
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    put:
+      summary: Update user
+      description: Update a specific user
+      tags:
+        - Admin
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          description: ID of the user
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                email:
+                  type: string
+                  format: email
+                firstName:
+                  type: string
+                lastName:
+                  type: string
+                role:
+                  type: string
+                  enum: [admin, security, staff, manager, trainer, host]
+                department:
+                  type: string
+                phoneNumber:
+                  type: string
+                isActive:
+                  type: boolean
+      responses:
+        '200':
+          description: User updated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    $ref: '#/components/schemas/User'
+        '404':
+          description: User not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '400':
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: Email already in use
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Forbidden - requires admin role
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    delete:
+      summary: Delete user
+      description: Delete a specific user
+      tags:
+        - Admin
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          description: ID of the user
+          schema:
+            type: string
+      responses:
+        '200':
+          description: User deleted successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: User deleted successfully
+        '404':
+          description: User not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '400':
+          description: Cannot delete your own account
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Forbidden - requires admin role
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /admin/settings:
+    get:
+      summary: Get system settings
+      description: Get system settings
+      tags:
+        - Admin
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Settings retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    $ref: '#/components/schemas/SystemSettings'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Forbidden - requires admin role
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    put:
+      summary: Update system settings
+      description: Update system settings
+      tags:
+        - Admin
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                settings:
+                  $ref: '#/components/schemas/SystemSettings'
+              required:
+                - settings
+      responses:
+        '200':
+          description: Settings updated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: Settings updated successfully
+                  data:
+                    $ref: '#/components/schemas/SystemSettings'
+        '400':
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Forbidden - requires admin role
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /admin/audit-logs:
+    get:
+      summary: Get audit logs
+      description: Get system audit logs
+      tags:
+        - Admin
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: startDate
+          in: query
+          description: Filter by date (start)
+          schema:
+            type: string
+            format: date
+        - name: endDate
+          in: query
+          description: Filter by date (end)
+          schema:
+            type: string
+            format: date
+        - name: userId
+          in: query
+          description: Filter by user ID
+          schema:
+            type: string
+        - name: action
+          in: query
+          description: Filter by action type
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Audit logs retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: string
+                        action:
+                          type: string
+                        userId:
+                          type: string
+                        timestamp:
+                          type: string
+                          format: date-time
+                        details:
+                          type: object
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Forbidden - requires admin role
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /admin/licenses:
+    get:
+      summary: Get licenses
+      description: Get system licenses
+      tags:
+        - Admin
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Licenses retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/License'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Forbidden - requires admin role
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    post:
+      summary: Add license
+      description: Add a new license
+      tags:
+        - Admin
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                licenseKey:
+                  type: string
+                expiryDate:
+                  type: string
+                  format: date-time
+              required:
+                - licenseKey
+                - expiryDate
+      responses:
+        '201':
+          description: License added successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: License added successfully
+                  data:
+                    $ref: '#/components/schemas/License'
+        '400':
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Forbidden - requires admin role
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'

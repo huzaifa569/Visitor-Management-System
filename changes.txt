@@ -1,0 +1,26 @@
+Changes in VMS 
+Point 1.   site location needed and also company name for 
+contractor only when contractor is selected 
+Point 2 in patient visitor to be removed to Visitor and site names like which 
+company 
+Point 3 also there should be a way to disable and enbale options like contractor 
+or visitor from site admin 
+Point 4  visit date to be removed 
+department to be added then host employee names and meeting locations 
+dropbox 
+Point 5 in all visitor page add same form same options for visitor or contractor 
+Point 6 option for more dashboard by type of visitor and filter by name of host etc 
+or departments also there should be a way to see all visitors list why they visited 
+when what time checked in and checked out also able to export it to excel or pdf 
+and other required options 
+Point 7 also add same option for export for pdf etc 
+Point 8 details should be same as it will be on main page form 
+Point 9 this has to be sorted of some pages has a navbar  
+Point 10 this has to be sorted history page show some error 
+Point 11 When contractor or visitor fill the form they get email notifications that 
+your form was submitted  
+And second when admin approved then also received approved email And card 
+was generated of the visitor 
+Point 12 last  
+Configure main email that main person received notification who can added and 
+by added  
