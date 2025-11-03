@@ -15,7 +15,7 @@ const nextConfig: NextConfig = {
     domains: ["res.cloudinary.com"],
   },
   experimental: {
-    css: false, // 🔥 LightningCSS disable
+    useLightningcss: true, // ✅ Correct property name for LightningCSS
   },
 };
 
