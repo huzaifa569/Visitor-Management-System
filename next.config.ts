@@ -1,3 +1,25 @@
+// import type { NextConfig } from "next";
+
+// const nextConfig: NextConfig = {
+//   eslint: {
+//     // Warning: This allows production builds to successfully complete even if
+//     // your project has ESLint errors.
+//     ignoreDuringBuilds: true,
+//   },
+//   typescript: {
+//     // Warning: This allows production builds to successfully complete even if
+//     // your project has type errors.
+//     ignoreBuildErrors: false,
+//   },
+//   images: {
+//     domains: ["res.cloudinary.com"],
+//   },
+//   experimental: {
+//     css: false, // 🔥 LightningCSS disable
+//   },
+// };
+
+// export default nextConfig;
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
@@ -14,9 +36,7 @@ const nextConfig: NextConfig = {
   images: {
     domains: ["res.cloudinary.com"],
   },
-  experimental: {
-    css: false, // 🔥 LightningCSS disable
-  },
+  // Remove the experimental.css option - it doesn't exist
 };
 
 export default nextConfig;
