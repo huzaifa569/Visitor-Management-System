@@ -14,9 +14,7 @@ const nextConfig: NextConfig = {
   images: {
     domains: ["res.cloudinary.com"],
   },
-  experimental: {
-    useLightningcss: true, // ✅ Correct property name for LightningCSS
-  },
+  // Remove the experimental.css option - it doesn't exist
 };
 
 export default nextConfig;
