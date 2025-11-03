@@ -14,7 +14,6 @@ const nextConfig: NextConfig = {
   images: {
     domains: ["res.cloudinary.com"],
   },
-  // Remove the experimental.css option - it doesn't exist
 };
 
 export default nextConfig;
