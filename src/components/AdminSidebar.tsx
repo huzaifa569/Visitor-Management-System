@@ -103,11 +103,11 @@ export default function AdminSidebar() {
         },
       ],
     },
-    {
-      title: "Access Control",
-      href: "/admin/access-control",
-      icon: <QrCode className='h-4 w-4' />
-    },
+    // {
+    //   title: "Access Control",
+    //   href: "/admin/access-control",
+    //   icon: <QrCode className='h-4 w-4' />
+    // },
     {
       title: 'Training',
       href: '/admin/training',

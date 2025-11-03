@@ -25,6 +25,8 @@ type FormData = {
     email: string;
     visitorCategory: string;
     siteLocation: string;
+    company: string;        
+    comments: string;      
     department: string;
     hostEmployee: string;
     meetingLocation: string;
@@ -45,6 +47,7 @@ interface VisitorFormProps {
     setFormType: React.Dispatch<React.SetStateAction<'visitor' | 'contractor'>>;
     error: string;
     success: string;
+    isSubmitting: boolean;  // ✅ Add karo ye line
 }
 
 const VisitorForm = ({ form, handleChange, handleSubmit, setForm, setFormType, error, success }: VisitorFormProps) => {
@@ -276,6 +279,8 @@ const VisitorForm = ({ form, handleChange, handleSubmit, setForm, setFormType, e
                                                 email: '',
                                                 hostEmployee: '',
                                                 siteLocation: '',
+                                                company: "",       
+                                                comments: "",   
                                                 purpose: '',
                                                 department: '',
                                                 meetingLocation: '',

@@ -8,6 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft, AlertCircle, CheckCircle, Clock } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 
 type FormData = {
   firstName: string;
@@ -40,6 +41,8 @@ const getInitialFormData = (formType: string): FormData => ({
 });
 
 export default function AddVisitorPage() {
+    const router = useRouter();
+  
   const [formType, setFormType] = useState<'visitor' | 'contractor'>('visitor');
   const [formData, setFormData] = useState<FormData>(() => getInitialFormData('visitor'));
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -74,11 +77,16 @@ export default function AddVisitorPage() {
     }
 
     try {
-      const response = await fetch(`https://backend-vms-1.onrender.com/api/admin/schedulevisit`, {
+      const response = await fetch(`https://vistor-mangement-system-backend.vercel.app/api/admin/schedulevisit`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(formData),
       });
+     if (response.status === 201) {
+        setTimeout(() => {
+          router.push('/admin/visitors');
+        }, 800);
+      }
  
       if (!response.ok) {
         const errorData = await response.json();

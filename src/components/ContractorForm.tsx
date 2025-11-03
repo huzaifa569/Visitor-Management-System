@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useMemo, useCallback, useEffect } from "react";
+import React, { useState, useMemo, useCallback, useEffect, useRef } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -13,10 +13,8 @@ import Image from 'next/image';
 import { newVisitorAPI } from "@/lib/api";
 import toast from "react-hot-toast";
 import { convertFileToBase64, uploadBase64File } from "../utils";
-import { AiOutlineLoading3Quarters } from "react-icons/ai";
 import { adminAPI } from "@/lib/api";
-
-
+import { Camera, Upload } from 'lucide-react';
 
 type SystemSettingsType = {
   visitorPhotoRequired: boolean;
@@ -25,7 +23,6 @@ type SystemSettingsType = {
 
 type DocumentItem =
   { name: string; file?: File; url: string; type?: string; uploadedAt?: string };
-
 
 type PPEKeys =
   | 'HARD HAT'
@@ -38,7 +35,6 @@ type PPEKeys =
   | 'GLOVES'
   | 'DUST MASK'
   | 'FALL ARREST';
-
 
 type FormData = {
   firstName: string;
@@ -53,6 +49,8 @@ type FormData = {
   visitStartDate: string;
   visitEndDate: string;
   purpose: string;
+  company:string
+  comments: string; 
   agreed: string;
   hazards: {
     title: string;
@@ -75,14 +73,11 @@ type FormData = {
   pics?: string;
 };
 
-
+type PhotoUploadEvent = React.ChangeEvent<HTMLInputElement> | React.DragEvent<HTMLDivElement>;
 
 interface ContractFormProps {
   form: FormData;
-
-  handleChange: (
-    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
-  ) => void;
+  handleChange: (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => void;
   handleSubmit: (
     e: React.FormEvent<HTMLFormElement>, updatedForm?: FormData
   ) => void;
@@ -90,9 +85,10 @@ interface ContractFormProps {
   setFormType: React.Dispatch<React.SetStateAction<'visitor' | 'contractor'>>;
   error: string;
   success: string;
+  isSubmitting: boolean;  
 }
 
-export default function ContractorForm({ form, handleChange, handleSubmit, setForm, setFormType, error, success }: ContractFormProps) {
+export default function ContractorForm({ form, handleSubmit, setForm, setFormType, error, success }: ContractFormProps) {
   const hazards = useMemo(() => [
     {
       title: "Fire",
@@ -156,9 +152,7 @@ export default function ContractorForm({ form, handleChange, handleSubmit, setFo
     },
   ], []);
 
-
   const ppeItems: PPEKeys[] = ["HARD HAT", "SAFETY SHOES", "OVERALLS", "EYE PROTECTION", "VEST VEST", "EAR PROTECTION", "RESPIRATORY EQUIP", "GLOVES", "DUST MASK", "FALL ARREST"];
-
 
   const [openHazards, setOpenHazards] = useState<Record<string, boolean>>({});
   const [selectedHazards, setSelectedHazards] = useState<Record<
@@ -171,7 +165,6 @@ export default function ContractorForm({ form, handleChange, handleSubmit, setFo
   >>({});
   const [loading, setLoading] = useState(false);
 
-
   const [searchEmail, setSearchEmail] = useState("");
   const [isSearching, setIsSearching] = useState(false);
   const [employees, setEmployees] = useState<{ id: string; firstName: string; lastName: string; siteLocation?: string; meetingLocation?: string; }[]>([]);
@@ -181,7 +174,123 @@ export default function ContractorForm({ form, handleChange, handleSubmit, setFo
     trainingRequired: false,
   });
 
+  const [showWebcam, setShowWebcam] = useState(false);
+  const [stream, setStream] = useState<MediaStream | null>(null);
   
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+
+  const handleChange = useCallback((e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
+    const { name, value, type } = e.target;
+      
+    if (type === 'checkbox') {
+      const checked = (e.target as HTMLInputElement).checked;
+      setForm(prev => ({
+        ...prev,
+        [name]: checked ? "on" : ""
+      }));
+    } else {
+      setForm(prev => ({
+        ...prev,
+        [name]: value || "" 
+      }));
+    }
+  }, [setForm]);
+
+  const handleSelectChange = useCallback((name: string, value: string) => {
+    setForm(prev => ({
+      ...prev,
+      [name]: value || "" 
+    }));
+  }, [setForm]);
+
+  const startWebcam = async () => {
+    try {
+      const mediaStream = await navigator.mediaDevices.getUserMedia({ 
+        video: { facingMode: 'user', width: 1280, height: 720 } 
+      });
+      setStream(mediaStream);
+      setShowWebcam(true);
+      
+      setTimeout(() => {
+        if (videoRef.current) {
+          videoRef.current.srcObject = mediaStream;
+        }
+      }, 100);
+    } catch (error) {
+      toast.error('Camera access denied or not available');
+    }
+  };
+
+  const stopWebcam = () => {
+    if (stream) {
+      stream.getTracks().forEach(track => track.stop());
+      setStream(null);
+    }
+    setShowWebcam(false);
+  };
+
+  const capturePhoto = () => {
+    const video = videoRef.current;
+    const canvas = canvasRef.current;
+    
+    if (video && canvas && video.videoWidth > 0 && video.videoHeight > 0) {
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+      
+      const ctx = canvas.getContext('2d');
+      if (ctx) {
+        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+        
+        const imageDataUrl = canvas.toDataURL('image/jpeg', 0.8);
+        
+        setForm(prev => ({ 
+          ...prev, 
+          pics: imageDataUrl 
+        }));
+        
+        stopWebcam();
+        toast.success('Photo captured successfully!');
+      }
+    } else {
+      toast.error('Camera not ready. Please wait a moment and try again.');
+    }
+  };
+
+  const handleGalleryUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (!file.type.startsWith('image/')) {
+        toast.error('Please select an image file');
+        return;
+      }
+
+      const fileSizeInMB = file.size / (1024 * 1024);
+      if (fileSizeInMB > 5) {
+        toast.error('File size exceeds 5MB limit');
+        return;
+      }
+
+      setUploadLoading(true);
+      const reader = new FileReader();
+      reader.onload = () => {
+        setForm(prev => ({ ...prev, pics: reader.result as string }));
+        setUploadLoading(false);
+        toast.success('Photo uploaded successfully!');
+      };
+      reader.onerror = () => {
+        setUploadLoading(false);
+        toast.error('Failed to upload photo');
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  // Remove photo
+  const removePhoto = () => {
+    setForm(prev => ({ ...prev, pics: undefined }));
+    toast.success('Photo removed');
+  };
 
   console.log(employees);
 
@@ -191,28 +300,24 @@ export default function ContractorForm({ form, handleChange, handleSubmit, setFo
   }, []);
 
   const fetchSettings = async () => {
-
     try {
       const systemSettings = await adminAPI.getSystemSettings();
 
-      // Ensure all properties are present using fallback/default values
       setSettings({
         visitorPhotoRequired: systemSettings?.visitorPhotoRequired ?? false,
         trainingRequired: systemSettings?.trainingRequired ?? false,
       });
+      console.log(systemSettings,9948848)
     } catch (err) {
       console.error('Error fetching system settings:', err);
       toast.error(err instanceof Error ? err.message : 'Failed to load system settings');
     }
   };
 
-  const fetchUserDetails = async () => {
-
-    try {
-      const users = await adminAPI.getUsers();
-
-      // Filter out admins and map to only firstname + lastname
-      const nonAdminEmployees = users
+const fetchUserDetails = async () => {
+  try {
+    const users = await adminAPI.getUsers();
+    const nonAdminEmployees = users
         .filter((u) => u.role !== 'admin')
         .map((u) => ({
           id: u._id,
@@ -222,17 +327,12 @@ export default function ContractorForm({ form, handleChange, handleSubmit, setFo
           meetingLocation: u.meetingLocation
 
         }));
-
-      setEmployees(nonAdminEmployees);
-      console.log(nonAdminEmployees);
-
-
-
-    } catch (error) {
-      console.error('Error fetching employees:', error);
-      toast.error(error instanceof Error ? error.message : 'Failed to fetch employees');
-    }
-  };
+      setEmployees(nonAdminEmployees);  
+  } catch (error) {
+    console.error('Error fetching employees:', error);
+    toast.error(error instanceof Error ? error.message : 'Failed to fetch employees');
+  }
+};
 
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setSearchEmail(e.target.value);
@@ -251,7 +351,6 @@ export default function ContractorForm({ form, handleChange, handleSubmit, setFo
         return;
       }
 
-      // ✅ Set the returned data into your form
       setForm((prevForm) => ({
         ...prevForm,
         ...data,
@@ -294,23 +393,15 @@ export default function ContractorForm({ form, handleChange, handleSubmit, setFo
     }));
   };
 
-  console.log(selectedHazards);
-
-
-
   const setPPE = useCallback((item: string, opt: string) => {
-    console.log("setPPE called for:");
     setForm((prevForm) => ({
       ...prevForm,
       ppe: {
         ...prevForm.ppe,
-        [item]: opt,
+        [item]: opt as 'Y' | 'N',
       },
     }));
   }, [setForm]);
-
-
-
 
   const toggleHazardBox = useCallback((hazard: string) => {
     setOpenHazards((prev) => ({
@@ -319,42 +410,29 @@ export default function ContractorForm({ form, handleChange, handleSubmit, setFo
     }));
   }, [])
 
-
-
   const onSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setLoading(true);
 
     try {
       const updatedHazards = Object.values(selectedHazards).map((hazard) => ({
-        title: hazard.title,
-        risk: hazard.risk,
-        selectedControls: hazard.selectedControls,
+        title: hazard.title || '',
+        risk: hazard.risk || '',
+        selectedControls: hazard.selectedControls || [],
       }));
-
-      console.log(updatedHazards);
-
 
       const updatedForm = {
         ...form,
         hazards: updatedHazards,
       };
 
-      // ✅ Don't rely on setForm here — just pass updatedForm directly
       handleSubmit(e, updatedForm);
-      setLoading(false);
-     
-
-
     } catch (err) {
       console.error("Submission error:", err);
-
     } finally {
       setLoading(false);
     }
   };
-
-
 
   const MAX_FILE_SIZE_MB = 5;
 
@@ -374,7 +452,7 @@ export default function ContractorForm({ form, handleChange, handleSubmit, setFo
       try {
         const base64 = await convertFileToBase64(file);
         const fullBase64 = `data:${file.type};base64,${base64}`;
-        const url = await uploadBase64File(fullBase64, "raw"); // Call your Cloudinary upload function
+        const url = await uploadBase64File(fullBase64, "raw");
 
         if (url) {
           uploadedDocs.push({
@@ -386,82 +464,19 @@ export default function ContractorForm({ form, handleChange, handleSubmit, setFo
         }
       } catch (error) {
         console.error(`Document upload failed for "${file.name}":`, error);
+        toast.error(`Failed to upload ${file.name}`);
       }
     }
 
-    // Update form state
     setForm((prev) => ({
       ...prev,
       documents: [...(prev.documents || []), ...uploadedDocs],
     }));
-  };
 
-
-
-  type UploadEvent =
-    | React.ChangeEvent<HTMLInputElement>
-    | React.DragEvent<HTMLDivElement>;
-
-
-  const handleFileUpload = async (e: UploadEvent) => {
-    e.preventDefault();
-    const field = "profile pics";
-    let file: File | null = null;
-
-    if ("dataTransfer" in e) {
-      // Handle drag-and-drop
-      file = e.dataTransfer.files?.[0] || null;
-    } else {
-      // Handle traditional input upload
-      file = e.target.files?.[0] || null;
-    }
-
-    if (file) {
-      // ✅ Replace slashes in file name to avoid Cloudinary error
-      const sanitizedFile = new File([file], file.name.replace(/\//g, '-'), {
-        type: file.type,
-      });
-
-      const fileSizeInMB = sanitizedFile.size / (1024 * 1024);
-
-      try {
-        // ✅ Convert to base64
-        const base64 = await convertFileToBase64(sanitizedFile);
-
-        if (fileSizeInMB > MAX_FILE_SIZE_MB) {
-          alert("File size exceeds 5MB limit. Please upload a smaller image.");
-          return;
-        }
-
-        if (base64) {
-          setUploadLoading(true);
-
-          // ✅ Upload to Cloudinary
-          const url = await uploadBase64File(base64, "image", setUploadLoading);
-          setUploadLoading(false);
-
-          if (url) {
-            setForm((prev) => ({
-              ...prev,
-              pics: url,
-            }));
-            console.log("Upload successful:", field);
-          } else {
-            console.warn("Upload failed: No URL returned");
-          }
-        }
-      } catch (error) {
-        console.error("Upload failed:", error);
-        setUploadLoading(false);
-      }
-    } else {
-      console.warn("No file selected");
+    if (uploadedDocs.length > 0) {
+      toast.success(`${uploadedDocs.length} document(s) uploaded successfully`);
     }
   };
-
-
-
-
 
   return (
     <main className="min-h-screen bg-gradient-to-br from-white via-indigo-100 to-purple-100 pb-4 sm:pb-8 lg:pb-10">
@@ -469,8 +484,7 @@ export default function ContractorForm({ form, handleChange, handleSubmit, setFo
       <div className='bg-white rounded-xl sm:rounded-3xl shadow-lg sm:p-6 md:p-8 w-full max-w-8xl sm:mx-4 md:mx-auto grid grid-cols-1 lg:grid-cols-2 gap-6 sm:gap-8 mt-4 sm:mt-6  pb-4 sm:pb-20'>
 
         <div className="p-4 w-full mx-auto space-y-6 bg-white rounded-xl shadow-md mt-2 sm:mt-6 lg:mt-8 xl:mt-10">
-          <h1 className="text-2xl font-bold mb-4">New Contractor
-          </h1>
+          <h1 className="text-2xl font-bold mb-4">New Contractor</h1>
           <div className="flex items-center mb-2">
             <div className="bg-blue-100 p-1.5 sm:p-2 rounded-full mr-2 sm:mr-3 flex-shrink-0">
               <User className="h-5 w-5 sm:h-6 sm:w-6 text-blue-700" />
@@ -491,7 +505,7 @@ export default function ContractorForm({ form, handleChange, handleSubmit, setFo
             </div>
           )}
 
-          {success && (
+          {/* {success && (
             <div className="bg-green-50 border border-green-200 text-green-700 p-4 sm:p-6 rounded-lg mb-4 sm:mb-6 flex items-start">
               <div className="bg-green-100 p-1.5 sm:p-2 rounded-full mr-3 sm:mr-4 flex-shrink-0">
                 <CheckCircle className="h-5 w-5 sm:h-6 sm:w-6 text-green-600" />
@@ -500,7 +514,7 @@ export default function ContractorForm({ form, handleChange, handleSubmit, setFo
                 <p className="font-medium text-base sm:text-lg mb-1 sm:mb-2">Registration Successful!</p>
                 <p className="text-green-700 text-sm sm:text-base">{success}</p>
                 <div className="mt-3 sm:mt-4 flex flex-wrap gap-2 sm:gap-3">
-                  <Link href="/" className="bg-white border border-green-300 text-green-700 px-3 sm:px-4 py-1.5 sm:py-2 rounded-md text-xs sm:text-sm font-medium hover:bg-green-50 transition-colors">
+                  <Link href="" className="bg-white border border-green-300 text-green-700 px-3 sm:px-4 py-1.5 sm:py-2 rounded-md text-xs sm:text-sm font-medium hover:bg-green-50 transition-colors">
                     Return to Home
                   </Link>
 
@@ -514,6 +528,8 @@ export default function ContractorForm({ form, handleChange, handleSubmit, setFo
                       hostEmployee: '',
                       siteLocation: '',
                       purpose: '',
+                      company:'',
+                      comments: '', 
                       department: '',
                       meetingLocation: '',
                       visitStartDate: new Date().toISOString().slice(0, 16),
@@ -534,6 +550,7 @@ export default function ContractorForm({ form, handleChange, handleSubmit, setFo
                         "FALL ARREST": 'N',
                       },
                       documents: [],
+                      pics: undefined,
                     })}
                     className="bg-green-600 text-white px-3 sm:px-4 py-1.5 sm:py-2 rounded-md text-xs sm:text-sm font-medium hover:bg-green-700 transition-colors"
                   >
@@ -542,7 +559,7 @@ export default function ContractorForm({ form, handleChange, handleSubmit, setFo
                 </div>
               </div>
             </div>
-          )}
+          )} */}
 
           {/* Return Visitor Search */}
           <div className="bg-gradient-to-br from-blue-50 to-indigo-50 p-4 sm:p-6 rounded-xl mb-6 sm:mb-8 shadow-sm border border-blue-100">
@@ -561,7 +578,7 @@ export default function ContractorForm({ form, handleChange, handleSubmit, setFo
               </Link>
             </div>
             <div className="flex items-start mb-4 sm:mb-5">
-              <div className="bg-blue-100 p-1 sm:p-1.5 rounded-full mr-2 sm:mr-3 mt-0.5 flex-shrink-0">
+              <div className="bg-blue-100 p-1 sm:p-1.5 rounded-full mr=2 sm:mr-3 mt-0.5 flex-shrink-0">
                 <CheckCircle className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-blue-600" />
               </div>
               <p className="text-sm sm:text-base text-gray-700">
@@ -614,22 +631,25 @@ export default function ContractorForm({ form, handleChange, handleSubmit, setFo
                 <CardContent className="space-y-4 pt-6">
                   <h2 className="text-xl font-semibold">Personal Information</h2>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <Input name="firstName" placeholder="First Name" value={form.firstName} onChange={handleChange} required />
-                    <Input name="lastName" placeholder="Last Name" value={form.lastName} onChange={handleChange} required />
-                    <Input name="phone" placeholder="Phone Number" value={form.phone} onChange={handleChange} required />
-                    <Input name="email" placeholder="Email Address" value={form.email} onChange={handleChange} />
-                    <Select required value={form.visitorCategory} onValueChange={(value) => setFormType(value as 'visitor' | 'contractor')}>
+                    {/* ✅ FIXED: Added || '' to prevent undefined values */}
+                    <Input name="firstName" placeholder="First Name" value={form.firstName || ''} onChange={handleChange} required />
+                    <Input name="lastName" placeholder="Last Name" value={form.lastName || ''} onChange={handleChange} required />
+                    <Input name="phone" placeholder="Phone Number" value={form.phone || ''} onChange={handleChange} required />
+                    <Input name="email" placeholder="Email Address" value={form.email || ''} onChange={handleChange} />
+                    {/* ✅ FIXED: Changed name from "Company" to "company" and added || '' */}
+                    <Input name="company" placeholder="Company Name" value={form.company || ''} onChange={handleChange} />
+
+                    <Select required value={form.visitorCategory || 'contractor'} onValueChange={(value) => setFormType(value as 'contractor')}>
                       <SelectTrigger>
                         <SelectValue placeholder="Visitor Category" />
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="contractor">Contractor</SelectItem>
-                        <SelectItem value="visitor">Visitor</SelectItem>
                       </SelectContent>
                     </Select>
 
                     {/* Updated Site Location to use a dropdown */}
-                    <Select value={form.siteLocation} onValueChange={(value) => setForm({ ...form, siteLocation: value })} required>
+                    <Select value={form.siteLocation || ''} onValueChange={(value) => handleSelectChange('siteLocation', value)} required>
                       <SelectTrigger>
                         <SelectValue placeholder="Site Location" />
                       </SelectTrigger>
@@ -647,45 +667,124 @@ export default function ContractorForm({ form, handleChange, handleSubmit, setFo
                   </div>
 
                   {/* Contractor Photo */}
-                  {settings.visitorPhotoRequired && (
-                    <div>
-                      <h2 className="text-sm md:text-base text-gray-700 font-semibold">Upload Profile Picture</h2>
-                      <div className={`w-[80%] md:w-2/3 lg:w-2/4 h-fit  border-2 border-gray-300 p-2 bg-white rounded-3xl my-4 mx-auto ${form.pics ? "p-1" : "p-10"} `} onDrop={(e) => handleFileUpload(e)}
-                        onDragOver={(e) => e.preventDefault()}>
-                        <label htmlFor="pics">
-                          {form.pics ? (
-                            <Image
+                  <div>
+                    <div className="max-w-2xl mx-auto">
+                    <h2 className="text-xl font-semibold text-center">Upload Profile Picture</h2>
+                      {/* Webcam Modal */}
+                      {showWebcam && (
+                        <div className="fixed inset-0 bg-black bg-opacity-75 z-50 flex items-center justify-center p-4">
+                          <div className="bg-white rounded-2xl p-6 max-w-2xl w-full">
+                            <div className="flex justify-between items-center mb-4">
+                              <h3 className="text-xl font-semibold">Take Photo</h3>
+                              <button 
+                                onClick={stopWebcam}
+                                className="p-2 hover:bg-gray-100 rounded-full"
+                              >
+                                <X className="w-6 h-6" />
+                              </button>
+                            </div>
+                            
+                            <div className="relative bg-black rounded-lg overflow-hidden">
+                              <video 
+                                ref={videoRef}
+                                autoPlay
+                                playsInline
+                                muted
+                                className="w-full h-auto max-h-96 object-contain"
+                                onLoadedMetadata={() => console.log('Video ready')}
+                                onLoadStart={() => console.log('Video loading')}
+                              />
+                            </div>
+
+                            <button
+                              onClick={capturePhoto}
+                              className="w-full mt-4 bg-blue-600 text-white py-3 rounded-lg font-semibold hover:bg-blue-700 transition flex items-center justify-center gap-2"
+                            >
+                              <Camera className="w-5 h-5" />
+                              Capture Photo
+                            </button>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Hidden canvas for capturing */}
+                      <canvas ref={canvasRef} className="hidden" />
+
+                      {/* Upload Area */}
+                      <div className="bg-white rounded-3xl shadow-lg p-6">
+                        {form.pics ? (
+                          <div className="relative">
+                            <img
                               src={form.pics}
-                              alt="pics img"
-                              width={100}
-                              height={100}
-                              className="w-full h-[200px] object-cover object-center rounded-3xl"
+                              alt="Profile"
+                              className="w-full h-64 object-cover rounded-2xl"
                             />
-                          ) : (
-                            <>
-                              {uploadLoading ? (
-                                <div className="flex justify-center items-center h-full w-full">
-                                  <AiOutlineLoading3Quarters className="animate-spin text-primary text-5xl" />
+                            <div className="absolute top-4 right-4 flex items-center gap-2">
+                            <button
+                              onClick={removePhoto}
+                              className="bg-red-500 text-white p-3 rounded-full hover:bg-red-600 shadow-lg flex items-center justify-center"
+                            >
+                              <X className="w-5 h-5" />
+                            </button>
+
+                            <button
+                              onClick={startWebcam}
+                              className="bg-blue-500 text-white p-3 rounded-full hover:bg-blue-600 shadow-lg flex flex-col items-center"
+                            >
+                              <Camera className="w-5 h-5" />
+                              {/* <span className="mt-1 text-sm">Retake</span> */}
+                            </button>
+                          </div>
+
+                          </div>
+                        ) : (
+                          <div className="border-2 border-dashed border-gray-300 rounded-2xl p-12">
+                            {uploadLoading ? (
+                              <div className="flex justify-center items-center">
+                                <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-blue-600"></div>
+                              </div>
+                            ) : (
+                              <div className="flex flex-col items-center gap-6">
+                                <div className="bg-gray-100 p-6 rounded-full">
+                                  <Camera className="w-12 h-12 text-gray-400" />
                                 </div>
-                              ) : (
-                                <div className=" flex items-center justify center gap-2 md:gap-4">
-                                  <ImageDownIcon color="gray" /> <p className="text-[12px] md:text-sm text-gray-600">Click to upload image</p>
+                                
+                                <p className="text-gray-500 text-center">
+                                  Choose an option to upload your photo
+                                </p>
+
+                                <div className="flex flex-col sm:flex-row gap-3 w-full max-w-sm">
+                                  <label 
+                                    htmlFor="gallery"
+                                    className="flex-1 cursor-pointer bg-blue-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-blue-700 transition text-center flex items-center justify-center gap-2"
+                                  >
+                                    <Upload className="w-5 h-5" />
+                                    Gallery
+                                  </label>
+                                  
+                                  <button
+                                    onClick={startWebcam}
+                                    className="flex-1 bg-gray-700 text-white px-6 py-3 rounded-lg font-semibold hover:bg-gray-800 transition flex items-center justify-center gap-2"
+                                  >
+                                    <Camera className="w-5 h-5" />
+                                    Camera
+                                  </button>
                                 </div>
-                              )}
-                            </>
-                          )}
-                          <input
-                            id="pics"
-                            type="file"
-                            name="pics"
-                            className="hidden"
-                            onChange={(e) => handleFileUpload(e)}
-                          />
-                        </label>
+
+                                <input
+                                  id="gallery"
+                                  type="file"
+                                  className="hidden"
+                                  accept="image/*"
+                                  onChange={handleGalleryUpload}
+                                />
+                              </div>
+                            )}
+                          </div>
+                        )}
                       </div>
                     </div>
-                  )}
-
+                  </div>
                 </CardContent>
               </Card>
 
@@ -694,7 +793,7 @@ export default function ContractorForm({ form, handleChange, handleSubmit, setFo
                 <CardContent className="space-y-4 pt-6">
                   <h2 className="text-xl font-semibold">Visit Information</h2>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <Select value={form.department} onValueChange={(value) => setForm({ ...form, department: value })} required>
+                    <Select value={form.department || ''} onValueChange={(value) => handleSelectChange('department', value)} required>
                       <SelectTrigger>
                         <SelectValue placeholder="Select Department" />
                       </SelectTrigger>
@@ -703,7 +802,7 @@ export default function ContractorForm({ form, handleChange, handleSubmit, setFo
                         <SelectItem value="engineering">Engineering</SelectItem>
                       </SelectContent>
                     </Select>
-                    <Select value={form.hostEmployee} onValueChange={(value) => setForm({ ...form, hostEmployee: value })} required>
+                    <Select value={form.hostEmployee || ''} onValueChange={(value) => handleSelectChange('hostEmployee', value)} required>
                       <SelectTrigger>
                         <SelectValue placeholder="Select Host Employee" />
                       </SelectTrigger>
@@ -719,7 +818,7 @@ export default function ContractorForm({ form, handleChange, handleSubmit, setFo
 
                       </SelectContent>
                     </Select>
-                    <Select value={form.meetingLocation} onValueChange={(value) => setForm({ ...form, meetingLocation: value })} required>
+                    <Select value={form.meetingLocation || ''} onValueChange={(value) => handleSelectChange('meetingLocation', value)} required>
                       <SelectTrigger>
                         <SelectValue placeholder="Select Meeting Location" />
                       </SelectTrigger>
@@ -736,12 +835,37 @@ export default function ContractorForm({ form, handleChange, handleSubmit, setFo
                     </Select>
                     <div className="flex flex-col gap-1">
                       <Label htmlFor="visit-start">Visit Start Date & Time:</Label>
-                      <Input id="visit-start" type="datetime-local" name="visitStartDate" value={form.visitStartDate} onChange={handleChange} />
+                      <Input 
+                        id="visit-start" 
+                        type="datetime-local" 
+                        name="visitStartDate" 
+                        value={form.visitStartDate || ''} 
+                        onChange={handleChange} 
+                        required 
+                      />
                     </div>
                     <div className="flex flex-col gap-1">
                       <Label htmlFor="visit-end">Visit End Date & Time:</Label>
-                      <Input id="visit-end" type="datetime-local" name="visitEndDate" value={form.visitEndDate} onChange={handleChange} />
+                      <Input 
+                        id="visit-end" 
+                        type="datetime-local" 
+                        name="visitEndDate" 
+                        value={form.visitEndDate || ''} 
+                        onChange={handleChange} 
+                        required 
+                      />
                     </div>
+                    <div className="flex flex-col gap-1">
+                      <Label htmlFor="purpose">Purpose of Visit</Label>
+                      <Input 
+                        id="purpose" 
+                        name="purpose" 
+                        placeholder="Purpose of visit" 
+                        value={form.purpose || ''} 
+                        onChange={handleChange} 
+                         
+                      />
+                    </div>  
                   </div>
                 </CardContent>
               </Card>
@@ -861,24 +985,26 @@ export default function ContractorForm({ form, handleChange, handleSubmit, setFo
                       </div>
                     ))}
                   </div>
-
-
                 </CardContent>
               </Card>
 
               {/* Comments & Submit */}
               <Card>
                 <CardContent className="space-y-4 pt-6">
-                  <h2 className="text-xl font-semibold">Comments</h2>
-                  <Textarea placeholder="Comments" className="min-h-[100px]" name="purpose" value={form.purpose}
-                    onChange={handleChange} required />
+                  <h2 className="text-xl font-semibold">Additional Comments</h2>
+                  <Textarea 
+                    placeholder="Any additional comments about your visit..." 
+                    className="min-h-[100px]" 
+                    name="comments" 
+                    value={form.comments || ''} 
+                    onChange={handleChange} 
+                  />
 
                   {/* Document Upload */}
                   <div className="space-y-2">
                     <h2 className="text-xl font-semibold">Attach Documents</h2>
                     <p className="text-sm text-gray-500">Accepted file types: PDF, DOC, DOCX</p>
                     <input
-                      placeholder="enter document"
                       type="file"
                       name="documents"
                       accept=".pdf,.doc,.docx"
@@ -896,7 +1022,6 @@ export default function ContractorForm({ form, handleChange, handleSubmit, setFo
                       </ul>
                     )}
                   </div>
-
 
                   {/* Terms and condition */}
                   <div className="bg-white border border-gray-200 rounded-xl p-4 sm:p-6 mb-4 sm:mb-6 shadow-sm mt-4 sm:mt-6">
@@ -917,13 +1042,13 @@ export default function ContractorForm({ form, handleChange, handleSubmit, setFo
                     </div>
 
                     <div className="flex items-start gap-2 sm:gap-3">
-                      <div className="mt-0.5">
+                      <div className="mt=0.5">
                         <input
                           type="checkbox"
                           name="agreed"
                           id="agreed"
                           required
-                          // checked={()=> form.agreed}
+                          checked={form.agreed === "on"}
                           onChange={handleChange}
                           className="h-4 w-4 sm:h-5 sm:w-5 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
                         />
@@ -933,7 +1058,6 @@ export default function ContractorForm({ form, handleChange, handleSubmit, setFo
                       </label>
                     </div>
                   </div>
-
 
                   <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 pt-2 sm:pt-4 justify-between">
                     <Link
@@ -952,19 +1076,17 @@ export default function ContractorForm({ form, handleChange, handleSubmit, setFo
                         {loading ? 'Submitting...' : 'Submit'}
                       </Button>
                     )}
-
                   </div>
                 </CardContent>
               </Card>
-
             </form>
           </div>
         </div>
 
-        {/* IMAGE SECTION */}
+        {/* OPTIMIZED IMAGE SECTION */}
         <div className="flex flex-col gap-3 sm:gap-4 items-center justify-center w-full">
           <div className="relative w-full h-40 sm:h-48 md:h-60 lg:h-96">
-            <Image
+             <Image
               src="/building.jpeg"
               alt="Building"
               fill
@@ -975,7 +1097,7 @@ export default function ContractorForm({ form, handleChange, handleSubmit, setFo
             />
           </div>
           <div className="relative w-full h-40 sm:h-48 md:h-60 lg:h-96">
-            <Image
+              <Image
               src="/reception.jpeg"
               alt="Reception"
               fill

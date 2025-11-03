@@ -1,6 +1,8 @@
 // API service for VMS backend
 const API_BASE_URL = 'https://vms-api-s6lc.onrender.com/api/v1';
-const NEXT_PUBLIC_API_BASE_URL = 'https://backend-vms-1.onrender.com/api';
+// const NEXT_PUBLIC_API_BASE_URL = 'https://backend-vms-1.onrender.com/api';
+const NEXT_PUBLIC_API_BASE_URL = 'https://vistor-mangement-system-backend.vercel.app/api';
+
 
 // Token expiration handler
 let logoutCallback: (() => void) | null = null;

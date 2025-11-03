@@ -7,6 +7,7 @@ import { adminAPI, SignupData } from '@/lib/api';
 import { ArrowLeft, User, Mail, Phone, Building, Lock, AlertCircle, CheckCircle, MapPin, Map, UserCog } from 'lucide-react';
 import Link from 'next/link';
 
+
 export default function AddUserPage() {
   const [formData, setFormData] = useState<SignupData>({
     firstName: '',
@@ -18,7 +19,7 @@ export default function AddUserPage() {
     siteLocation: '',
     meetingLocation: '',
     phoneNumber: '',
-    role: '',
+    role: 'admin',
   });
   
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -33,7 +34,7 @@ export default function AddUserPage() {
     setFormData(prev => ({
       ...prev,
       [name]: value
-    }));
+    }) );
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -45,7 +46,7 @@ export default function AddUserPage() {
     }
 
     // Validate form
-    if (!formData.firstName || !formData.lastName || !formData.email || !formData.password || !formData.department || !formData.siteLocation || !formData.meetingLocation || !formData.phoneNumber || !formData.role) {
+    if (!formData.firstName || !formData.lastName || !formData.email || !formData.password || !formData.department  || !formData.meetingLocation || !formData.phoneNumber ) {
       setError('Please fill in all required fields');
       return;
     }
@@ -75,6 +76,7 @@ export default function AddUserPage() {
         department: '',
         phoneNumber: '',
         role: 'staff',
+        meetingLocation:""
       });
 
       // Redirect to the users page after a short delay
@@ -254,89 +256,55 @@ export default function AddUserPage() {
                   className="pl-10 py-2 block w-full shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm border-gray-300 rounded-md"
                 />
               </div>
-            </div>
-
-            <div>
-              <label htmlFor="department" className="block text-sm font-medium text-gray-700 mb-1">
-                Department <span className="text-red-500">*</span>
-              </label>
-              <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <Building className="h-5 w-5 text-gray-400" />
+            </div>  
+              <div>
+                <label htmlFor="phoneNumber" className="block text-sm font-medium text-gray-700 mb-1">
+                  Meeting Location <span className="text-red-500">*</span>
+                </label>
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <MapPin className="h-5 w-5 text-gray-400" />
+                  </div>
+                 <input
+                    type="text"
+                    id="meetingLocation"
+                    name="meetingLocation"
+                    value={formData.meetingLocation}
+                    onChange={handleChange}
+                    required
+                    placeholder="Meeting Location"
+                    className="pl-10 py-2 block w-full shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm border-gray-300 rounded-md"
+                  />
                 </div>
-                <input
-                  type="text"
-                  id="department"
-                  name="department"
-                  value={formData.department}
-                  onChange={handleChange}
-                  required
-                  placeholder='dept'
-                  className="pl-10 py-2 block w-full shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm border-gray-300 rounded-md"
-                />
               </div>
-            </div>
-            <div>
-              <label htmlFor="siteLocation" className="block text-sm font-medium text-gray-700 mb-1">
-                Site Location <span className="text-red-500">*</span>
-              </label>
-              <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <MapPin className="h-5 w-5 text-gray-400" />
+                <div>
+                <label
+                  htmlFor="department"
+                  className="block text-sm font-medium text-gray-700 mb-1"
+                >
+                  Department <span className="text-red-500">*</span>
+                </label>
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <Building className="h-5 w-5 text-gray-400" />
+                  </div>
+                  <select
+                    id="department"
+                    name="department"
+                    value={formData.department}
+                    onChange={handleChange}
+                    required
+                    className="pl-10 py-2 block w-full shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm border-gray-300 rounded-md"
+                  >
+                    <option value="">Select Department</option>
+                    <option value="hr">HR</option>
+                    <option value="finance">Finance</option>
+                    <option value="it">IT</option>
+                    <option value="marketing">Marketing</option>
+                    <option value="sales">Sales</option>
+                  </select>
                 </div>
-                <input
-                  type="text"
-                  id="siteLocation"
-                  name="siteLocation"
-                  value={formData.siteLocation}
-                  onChange={handleChange}
-                  placeholder='site location'
-                  required
-                  className="pl-10 py-2 block w-full shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm border-gray-300 rounded-md"
-                />
               </div>
-            </div>
-            <div>
-              <label htmlFor="meetingLocation" className="block text-sm font-medium text-gray-700 mb-1">
-                Meeting Location <span className="text-red-500">*</span>
-              </label>
-              <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <Map className="h-5 w-5 text-gray-400" />
-                </div>
-                <input
-                  type="text"
-                  id="meetingLocation"
-                  name="meetingLocation"
-                  value={formData.meetingLocation}
-                  onChange={handleChange}
-                  required
-                  placeholder="meeting location"
-                  className="pl-10 py-2 block w-full shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm border-gray-300 rounded-md"
-                />
-              </div>
-            </div>
-
-            <div>
-              <label htmlFor="role" className="block text-sm font-medium text-gray-700 mb-1">
-                Role <span className="text-red-500">*</span>
-              </label>
-              <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <UserCog className="h-5 w-5 text-gray-400" />
-                </div>
-                <input
-                  type="text"
-                  id="role"
-                  name="role"
-                  value={formData.role}
-                  onChange={handleChange}
-                  required
-                  placeholder="role"
-                  className="pl-10 py-2 block w-full shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm border-gray-300 rounded-md"
-                />
-              </div>
-            </div>
           </div>
            
 

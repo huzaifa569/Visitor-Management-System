@@ -6,24 +6,29 @@ import { useRouter } from "next/navigation";
 import { adminAPI } from '@/lib/api';
 import toast from "react-hot-toast";
 
-
 type SystemSettingsType = {
   visitorPhotoRequired: boolean;
   trainingRequired: boolean;
 }
 
+type DocumentItem = {
+  name: string;
+  file?: File;
+  url: string;
+  type?: string;
+  uploadedAt?: string;
+};
 
-type DocumentItem =
-  { name: string; file?: File; url: string; type?: string; uploadedAt?: string };
-
-
-type FormData = {
+// Base form data that both types share
+type BaseFormData = {
   firstName: string;
   lastName: string;
   phone: string;
   email: string;
   visitorCategory: string;
   siteLocation: string;
+  company:string,
+  comments:string,
   department: string;
   hostEmployee: string;
   meetingLocation: string;
@@ -31,6 +36,11 @@ type FormData = {
   visitEndDate: string;
   purpose: string;
   agreed: string;
+  pics?: string;
+};
+
+// Contractor specific form data
+type ContractorFormData = BaseFormData & {
   hazards: {
     title: string;
     risk: string | number;
@@ -49,26 +59,10 @@ type FormData = {
     "FALL ARREST": 'N' | 'Y';
   };
   documents: DocumentItem[];
-  pics?: string;
 };
 
-type VisitorFormData = {
-  firstName: string;
-  lastName: string;
-  phone: string;
-  email: string;
-  visitorCategory: string;
-  siteLocation: string;
-  department: string;
-  hostEmployee: string;
-  meetingLocation: string;
-  visitStartDate: string;
-  visitEndDate: string;
-  purpose: string;
-  agreed: string;
-  pics?: string; // ✅ optional here
-};
-
+// Visitor form data
+type VisitorFormData = BaseFormData;
 
 const defaultVisitorForm = (formType: string): VisitorFormData => ({
   firstName: '',
@@ -77,6 +71,8 @@ const defaultVisitorForm = (formType: string): VisitorFormData => ({
   email: '',
   visitorCategory: formType,
   siteLocation: '',
+  company: '',          
+  comments: '',          
   department: '',
   hostEmployee: '',
   meetingLocation: '',
@@ -87,7 +83,7 @@ const defaultVisitorForm = (formType: string): VisitorFormData => ({
   pics: '',
 });
 
-const defaultContractorForm = (formType: string): FormData => ({
+const defaultContractorForm = (formType: string): ContractorFormData => ({
   ...defaultVisitorForm(formType),
   hazards: [],
   ppe: {
@@ -107,14 +103,15 @@ const defaultContractorForm = (formType: string): FormData => ({
 
 export default function FormPage() {
   const [formType, setFormType] = useState<'visitor' | 'contractor'>('visitor');
-  const [visitorForm, setVisitorForm] = useState(defaultVisitorForm('visitor'));
-  const [contractorForm, setContractorForm] = useState(defaultContractorForm('contractor'));
+  const [visitorForm, setVisitorForm] = useState<VisitorFormData>(defaultVisitorForm('visitor'));
+  const [contractorForm, setContractorForm] = useState<ContractorFormData>(defaultContractorForm('contractor'));
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [settings, setSettings] = useState<SystemSettingsType>({
     visitorPhotoRequired: false,
     trainingRequired: false,
   });
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const router = useRouter();
 
   useEffect(() => {
@@ -122,11 +119,8 @@ export default function FormPage() {
   }, []);
 
   const fetchSettings = async () => {
-
     try {
       const systemSettings = await adminAPI.getSystemSettings();
-
-      // Ensure all properties are present using fallback/default values
       setSettings({
         visitorPhotoRequired: systemSettings?.visitorPhotoRequired ?? false,
         trainingRequired: systemSettings?.trainingRequired ?? false,
@@ -136,7 +130,6 @@ export default function FormPage() {
       toast.error(err instanceof Error ? err.message : 'Failed to load system settings');
     }
   };
-
 
   useEffect(() => {
     if (formType === 'visitor') {
@@ -151,34 +144,47 @@ export default function FormPage() {
   ) => {
     const { name, value } = e.target;
     if (formType === 'visitor') {
-      setVisitorForm((prev) => ({ ...prev, [name]: value }))
+      setVisitorForm((prev) => ({ ...prev, [name]: value }));
     } else {
       setContractorForm((prev) => ({ ...prev, [name]: value }));
     }
-
   };
 
-  console.log(contractorForm);
-
-
-
-  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>, updatedFormOverride?: FormData) => {
+const handleSubmit = async (e: React.FormEvent<HTMLFormElement>, updatedFormOverride?: ContractorFormData | VisitorFormData) => {
     e.preventDefault();
-
-
+    setIsSubmitting(true);
+    setError('');
+    setSuccess('');
 
     try {
       const isVisitor = formType === 'visitor';
       const formData = isVisitor ? visitorForm : contractorForm;
-      const endpoint = isVisitor ? 'visitor' : 'contractor';
-      const dataToSubmit = updatedFormOverride || formData;
+      let dataToSubmit = updatedFormOverride || formData;
 
-      const response = await fetch(`https://backend-vms-1.onrender.com/api/forms/${endpoint}`, {
+      // For contractor forms, remove file objects from documents before submitting
+      if (!isVisitor && 'documents' in dataToSubmit) {
+        const contractorData = dataToSubmit as ContractorFormData;
+        dataToSubmit = {
+          ...contractorData,
+          documents: contractorData.documents.map(doc => ({
+            name: doc.name,
+            url: doc.url,
+            type: doc.type,
+            uploadedAt: doc.uploadedAt
+          }))
+        } as ContractorFormData;
+      }
+
+      const response = await fetch(`https://vistor-mangement-system-backend.vercel.app/api/forms/contractor`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(dataToSubmit),
       });
-
+      if (response.status === 201) {
+        setTimeout(() => {
+          router.push('/admin/training');
+        }, 800);
+      }
       if (!response.ok) {
         const errorData = await response.json();
         throw new Error(errorData.error || 'Submission failed');
@@ -191,42 +197,28 @@ export default function FormPage() {
         localStorage.setItem('contractorId', data.contractor._id);
       }
 
+      // Reset forms
       if (isVisitor) {
         setVisitorForm(defaultVisitorForm(formType));
       } else {
         setContractorForm(defaultContractorForm(formType));
       }
 
-      setSuccess(`Your visit has been scheduled successfully! Please check in at the reception desk when you arrive. ${formType === "visitor" ? visitorForm.hostEmployee : contractorForm.hostEmployee} has been notified of your upcoming visit on ${new Date(formType === "contractor" ? visitorForm.visitStartDate : contractorForm.visitStartDate).toLocaleDateString()}.`);
-      setTimeout(() => { setError("") }, 3000)
-
-      if (formType === "visitor") {
-        alert("Visitor Form submitted Successfully!");
-      } else {
-        alert("Redirecting You to Training Page!");
-        setTimeout(() => {
-          if (settings.trainingRequired) {
-            router.push("/training-doc");
-          } else {
-            alert("Contractor Form Submitted");
-            router.push('/');
-          }
-        }, 2000);
-
-      }
-
-
+      // setSuccess(`Your visit has been scheduled successfully! Please check in at the reception desk when you arrive. ${formType === "visitor" ? visitorForm.hostEmployee : contractorForm.hostEmployee} has been notified of your upcoming visit on ${new Date(formType === "visitor" ? visitorForm.visitStartDate : contractorForm.visitStartDate).toLocaleDateString()}.`);
     } catch (error) {
       console.error('Submission failed:', error);
-      setError('Your form was not submitted. Please try again.');
-      setTimeout(() => { setError("") }, 3000)
-      alert('Something went wrong. Please try again.');
+      const errorMessage = error instanceof Error ? error.message : 'Your form was not submitted. Please try again.';
+      setError(errorMessage);
+      toast.error(errorMessage);
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
+
   return (
     <>
-      {formType === 'visitor' ? (
+      {formType === 'contractor' ? (
         <VisitorForm
           setForm={setVisitorForm}
           form={visitorForm}
@@ -235,6 +227,7 @@ export default function FormPage() {
           setFormType={setFormType}
           error={error}
           success={success}
+          isSubmitting={isSubmitting}
         />
       ) : (
         <ContractorForm
@@ -245,6 +238,7 @@ export default function FormPage() {
           setFormType={setFormType}
           error={error}
           success={success}
+          isSubmitting={isSubmitting}
         />
       )}
     </>

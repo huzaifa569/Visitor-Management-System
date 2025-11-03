@@ -207,35 +207,98 @@ export default function VisitorsPage() {
 
 
 
+  // const handleExportToExcel = async () => {
+  //   if (!token) return;
+
+  //   try {
+  //     const filters = {
+  //       status: statusFilter !== 'all' ? statusFilter : undefined,
+  //       category: categoryFilter !== 'all' ? categoryFilter : undefined,
+  //       department: departmentFilter !== 'all' ? departmentFilter : undefined,
+  //     };
+
+  //     const blob = await newVisitorAPI.exportToExcel(token, filters);
+
+  //     // Create download link
+  //     const url = window.URL.createObjectURL(blob);
+  //     const a = document.createElement('a');
+  //     a.style.display = 'none';
+  //     a.href = url;
+  //     a.download = `visitor-report-${new Date().toISOString().split('T')[0]}.xlsx`;
+  //     document.body.appendChild(a);
+  //     a.click();
+  //     window.URL.revokeObjectURL(url);
+  //     document.body.removeChild(a);
+
+  //     setSuccessMessage('Report exported successfully');
+  //   } catch (err) {
+  //     console.error('Error exporting report:', err);
+  //     setError(err instanceof Error ? err.message : 'Failed to export report');
+  //   }
+  // };
+
+
   const handleExportToExcel = async () => {
-    if (!token) return;
+  
+  if (!token || token === 'undefined' || token === 'null' || token === '') {
+    setError('Please login again - No valid token found');
+    localStorage.removeItem('token');
+    sessionStorage.removeItem('token');
+    return;
+  }
 
-    try {
-      const filters = {
-        status: statusFilter !== 'all' ? statusFilter : undefined,
-        category: categoryFilter !== 'all' ? categoryFilter : undefined,
-        department: departmentFilter !== 'all' ? departmentFilter : undefined,
-      };
+  try {
+    const testUrl = 'https://vistor-mangement-system-backend.vercel.app/api/admin/visitors/export';
+    const response = await fetch(testUrl, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${token}`, 
+        'Content-Type': 'application/json',
+      },
+    });
+    console.log(' Response Status:', response.status);
+    console.log(' Response OK:', response.ok);
 
-      const blob = await newVisitorAPI.exportToExcel(token, filters);
-
-      // Create download link
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.style.display = 'none';
-      a.href = url;
-      a.download = `visitor-report-${new Date().toISOString().split('T')[0]}.xlsx`;
-      document.body.appendChild(a);
-      a.click();
-      window.URL.revokeObjectURL(url);
-      document.body.removeChild(a);
-
-      setSuccessMessage('Report exported successfully');
-    } catch (err) {
-      console.error('Error exporting report:', err);
-      setError(err instanceof Error ? err.message : 'Failed to export report');
+    if (response.status === 401) {
+      const errorData = await response.json();
+      console.log(' Auth Error Details:', errorData);
+      
+      localStorage.removeItem('token');
+      sessionStorage.removeItem('token');
+      setError('Session expired. Please login again.');
+      return;
     }
-  };
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error(' Server Error:', errorText);
+      throw new Error(`Server returned ${response.status}: ${response.statusText}`);
+    }
+
+    const blob = await response.blob();
+    console.log(' Blob received, size:', blob.size);
+
+    if (blob.size === 0) {
+      throw new Error('Received empty file');
+    }
+
+    // Download the file
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `visitor-report-${new Date().toISOString().split('T')[0]}.xlsx`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    window.URL.revokeObjectURL(url);
+
+    setSuccessMessage('Report exported successfully!');
+
+  } catch (err) {
+    console.error(' Export error:', err);
+    setError(err instanceof Error ? err.message : 'Export failed. Please try again.');
+  }
+};
 
   const handleCheckOut = async (visitorId: string) => {
     if (!token) return;
@@ -509,6 +572,12 @@ export default function VisitorsPage() {
                               <span className="text-blue-600 font-medium">
                                 {visitor.firstName?.charAt(0)}{visitor.lastName?.charAt(0)}
                               </span>
+                            </div>
+                            <div className="ml-4">
+                              <div className="text-sm font-medium text-gray-900">
+                                {visitor.firstName} {visitor.lastName}
+                              </div>
+                              <div className="text-sm text-gray-500">{visitor.email}</div>
                             </div>
                             <div className="ml-4">
                               <div className="text-sm font-medium text-gray-900">
