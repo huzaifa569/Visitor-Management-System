@@ -183,7 +183,7 @@ const handleSubmit = async (e: React.FormEvent<HTMLFormElement>, updatedFormOver
       if (response.status === 201) {
         setTimeout(() => {
           router.push('/admin/training');
-        }, 800);
+        }, 1000);
       }
       if (!response.ok) {
         const errorData = await response.json();
