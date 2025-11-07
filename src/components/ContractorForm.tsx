@@ -88,7 +88,7 @@ interface ContractFormProps {
   isSubmitting: boolean;  
 }
 
-export default function ContractorForm({ form, handleSubmit, setForm, setFormType, error, success }: ContractFormProps) {
+export default function ContractorForm({ form, handleSubmit, setForm, setFormType, error, success,isSubmitting}: ContractFormProps) {
   const hazards = useMemo(() => [
     {
       title: "Fire",
@@ -1067,7 +1067,7 @@ const fetchUserDetails = async () => {
                       <ArrowUpRight className="mr-1.5 sm:mr-2 h-4 w-4 sm:h-5 sm:w-5 rotate-180" />
                       Return to Home
                     </Link>
-                    {settings.trainingRequired ? (
+                    {/* {settings.trainingRequired ? (
                       <Button type='submit' className="mt-4 w-full sm:w-auto" disabled={loading}>
                         {loading ? 'Loading...' : 'Next'}
                       </Button>
@@ -1075,7 +1075,16 @@ const fetchUserDetails = async () => {
                       <Button type='submit' className="mt-4 w-full sm:w-auto" disabled={loading}>
                         {loading ? 'Submitting...' : 'Submit'}
                       </Button>
-                    )}
+                    )} */}
+                  {settings.trainingRequired && (
+                    <Button 
+                      type='submit' 
+                      className="mt-4 w-full sm:w-auto" 
+                      disabled={isSubmitting}
+                    >
+                      {isSubmitting ? 'Processing...' : 'Submit'}
+                    </Button>
+                  )}
                   </div>
                 </CardContent>
               </Card>
