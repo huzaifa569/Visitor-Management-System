@@ -29,8 +29,8 @@ export default function VisitorCourseList() {
                 const completed: Training[] = await trainingAPI.getCompletedTrainingsByVisitor(contractorId);
                 console.log(all);
 
-                // setTrainings(all.filter(t => t.isActive));
-                setTrainings(all);
+                setTrainings(all.filter(t => t.isActive));
+                // setTrainings(all);
                 setCompletedIds(completed.map(c => c._id));
             } catch (error) {
                 console.error('Failed to load trainings or completions:', error);
