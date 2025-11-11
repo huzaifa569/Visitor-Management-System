@@ -434,9 +434,11 @@ export default function FormPage() {
         toast.success('Form submitted successfully!');
 
         // Redirect with contractorId
-        setTimeout(() => {
+        // setTimeout(() => {
+        //   router.push(`/training-doc?contractorId=${contractorId}`);
+        // }, 1000);
+        
           router.push(`/training-doc?contractorId=${contractorId}`);
-        }, 1000);
       } else {
         throw new Error('No contractor data received from server');
       }
