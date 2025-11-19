@@ -312,7 +312,7 @@ export default function CreateTrainingPage() {
 
 
   console.log(formData);
-  
+
 
 
 
@@ -501,7 +501,7 @@ export default function CreateTrainingPage() {
           </div>
 
           {/* Video Upload */}
-          <div className="mb-6">
+          {/* <div className="mb-6">
             <div className="flex justify-between items-center mb-4">
               <h3 className="text-lg font-medium text-gray-900">Videos</h3>
               <button type="button" onClick={addVideo} className="text-blue-600 hover:underline">Add Video</button>
@@ -535,6 +535,36 @@ export default function CreateTrainingPage() {
                 <button onClick={() => removeVideo(index)} className="text-red-600 text-sm hover:underline">Remove</button>
               </div>
             ))}
+          </div> */}
+
+          <div className="mb-6">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-lg font-medium text-gray-900">Videos</h3>
+              <button type="button" onClick={addVideo} className="text-blue-600 hover:underline">Add Video</button>
+            </div>
+            {(formData.videos || []).map((video, index) => (
+              <div key={index} className="mb-4">
+                <input
+                  type="text"
+                  placeholder="Video Name"
+                  value={video.name}
+                  onChange={(e) => handleVideoChange(index, 'name', e.target.value)}
+                  className="w-full px-3 py-2 mb-2 border border-gray-300 rounded-md"
+                />
+                <h3 className="text-lg font-medium text-gray-900">URL</h3>
+
+                <div className="relative w-[80%] sm:w-full overflow-hidden mt-2">
+                  <input
+                    type="text"
+                    placeholder="Video URL"
+                    value={video.url}
+                    onChange={(e) => handleVideoChange(index, 'url', e.target.value)}
+                    className="w-full px-3 py-2 mb-2 border border-gray-300 rounded-md"
+                  />
+                </div>
+                <button onClick={() => removeVideo(index)} className="text-red-600 text-sm hover:underline">Remove</button>
+              </div>
+            ))}
           </div>
 
           {/* Books Upload */}
@@ -557,7 +587,7 @@ export default function CreateTrainingPage() {
                     placeholder='book'
                     type="file"
                     accept=".pdf,.doc,.docx"
-                    disabled={videoUploadLoading} 
+                    disabled={videoUploadLoading}
                     onChange={(e) => handleBookUpload(index, e)}
                     className="mb-2 w-full text-xs file:text-xs file:py-1 file:px-2 file:rounded file:border-0 file:bg-gray-100 file:text-gray-700"
                   />
