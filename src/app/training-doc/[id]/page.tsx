@@ -113,7 +113,7 @@ export default function TrainingDetailPage() {
         <p className="mb-6 text-gray-700">{training.description}</p>
 
         {/* VIDEOS */}
-        {/* <section className="bg-white border rounded-2xl p-6 shadow-lg mb-6">
+        <section className="bg-white border rounded-2xl p-6 shadow-lg mb-6">
           <h2 className="text-2xl font-semibold mb-4">{training.title} - Videos</h2>
           {training.videos?.length ? training.videos.map((video, i) => (
             console.log(video.url,647464747),
@@ -124,59 +124,6 @@ export default function TrainingDetailPage() {
               </video>
             </div>
           )) : <p>No videos available</p>}
-        </section> */}
-
-        <section className="bg-white border rounded-2xl p-6 shadow-lg mb-6">
-          <h2 className="text-2xl font-semibold mb-4">{training.title} - Videos</h2>
-          {training.videos?.length ? training.videos.map((video, i) => {
-            console.log('Video URL:', video.url); // Yeh check karo console mein
-
-            // URL type detect karo
-            const isYouTube = video.url?.includes('youtube.com') || video.url?.includes('youtu.be');
-            const isCloudinary = video.url?.includes('cloudinary.com');
-
-            // YouTube embed URL banao
-            const getYouTubeEmbedUrl = (url: string) => {
-              if (url.includes('watch?v=')) {
-                const videoId = url.split('watch?v=')[1]?.split('&')[0];
-                return `https://www.youtube.com/embed/${videoId}`;
-              }
-              if (url.includes('youtu.be/')) {
-                const videoId = url.split('youtu.be/')[1]?.split('?')[0];
-                return `https://www.youtube.com/embed/${videoId}`;
-              }
-              if (url.includes('/embed/')) {
-                return url;
-              }
-              return url;
-            };
-
-            return (
-              <div key={i} className="mb-4">
-                <h3 className="text-md font-semibold mb-1">{video.name}</h3>
-
-                {/* YouTube videos ke liye iframe */}
-                {isYouTube ? (
-                  <iframe
-                    width="100%"
-                    height="315"
-                    src={getYouTubeEmbedUrl(video.url)}
-                    title={video.name || "YouTube video"}
-                    frameBorder="0"
-                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                    allowFullScreen
-                    className="w-full rounded shadow aspect-video"
-                  />
-                ) : (
-                  /* Cloudinary ya direct MP4 files ke liye video tag */
-                  <video controls className="w-full rounded shadow">
-                    <source src={video.url} type="video/mp4" />
-                    Your browser does not support the video tag.
-                  </video>
-                )}
-              </div>
-            );
-          }) : <p>No videos available</p>}
         </section>
 
         {/* BOOKS */}
