@@ -95,9 +95,9 @@ export default function CheckOut() {
       <AppBar />
 
       {/* QR Code Scanner */}
-      {showScanner && token && (
+      {showScanner && !token && (
         <QRCodeScanner
-          token={token}
+          token={token || ""}
           onClose={() => setShowScanner(false)}
         />
       )}
@@ -199,7 +199,7 @@ export default function CheckOut() {
               <div className="mt-4 flex justify-center">
                 <button
                   onClick={() => setShowScanner(true)}
-                  className="flex items-center justify-center bg-gray-100 hover:bg-gray-200 text-gray-800 px-4 py-2 rounded-lg transition-colors"
+                  className="flex items-center justify-center bg-gray-100 hover:bg-gray-200 text-gray-800 px-4 py-2 rounded-lg transition-colors cursor-pointer "
                 >
                   <QrCode className="mr-2 h-5 w-5" />
                   Scan QR Code

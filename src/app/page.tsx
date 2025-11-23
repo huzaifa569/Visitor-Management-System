@@ -56,10 +56,10 @@ export default function Home() {
   return (
     <main className="min-h-screen bg-white font-sans">
       {/* QR Code Scanner */}
-      {showScanner && token && (
+      {showScanner && !token && (
         <QRCodeScanner
-          token={token}
-          onClose={() => setShowScanner(false)}
+          token={token || ""}
+          onClose={() => setShowScanner(true)}
         />
       )}
 
@@ -103,7 +103,7 @@ export default function Home() {
                   Check Out <Clock className="ml-2 h-5 w-5" />
                 </Link>
                 <button
-                  className="flex items-center justify-center border-2 border-blue-700 text-blue-700 hover:bg-blue-50 px-4 sm:px-6 md:px-8 py-3 md:py-4 rounded-lg font-semibold w-full transition-all"
+                  className="flex items-center justify-center border-2 border-blue-700 text-blue-700 hover:bg-blue-50 px-4 sm:px-6 md:px-8 py-3 md:py-4 rounded-lg font-semibold w-full transition-all cursor-pointer "
                   onClick={() => setShowScanner(true)}
                 >
                   Scan QR <QrCode className="ml-2 h-5 w-5" />
