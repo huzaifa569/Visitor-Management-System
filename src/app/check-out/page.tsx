@@ -95,9 +95,9 @@ export default function CheckOut() {
       <AppBar />
 
       {/* QR Code Scanner */}
-      {showScanner && !token && (
+      {showScanner && token && (
         <QRCodeScanner
-          token={token || ""}
+          token={token}
           onClose={() => setShowScanner(false)}
         />
       )}

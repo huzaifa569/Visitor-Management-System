@@ -56,9 +56,9 @@ export default function Home() {
   return (
     <main className="min-h-screen bg-white font-sans">
       {/* QR Code Scanner */}
-      {showScanner && !token && (
+      {showScanner && token && (
         <QRCodeScanner
-          token={token || ""}
+          token={token}
           onClose={() => setShowScanner(false)}
         />
       )}
