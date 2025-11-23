@@ -1076,15 +1076,29 @@ const fetchUserDetails = async () => {
                         {loading ? 'Submitting...' : 'Submit'}
                       </Button>
                     )} */}
-                  {settings.trainingRequired && (
+                    
+                  {settings.trainingRequired ? (
+                    console.log(settings.trainingRequired,3456784567),
                     <Button 
                       type='submit' 
                       className="mt-4 w-full sm:w-auto" 
                       disabled={isSubmitting}
+
                     >
-                      {isSubmitting ? 'Processing...' : 'Submit'}
+                     Next
                     </Button>
-                  )}
+                  ) :(
+                    <Button 
+                      type='submit' 
+                      className="mt-4 w-full sm:w-auto" 
+                      disabled={isSubmitting}
+
+                    >
+                    Submit
+                    </Button>
+                  )
+                
+                }
                   </div>
                 </CardContent>
               </Card>
